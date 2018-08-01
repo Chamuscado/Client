@@ -33,7 +33,12 @@ public class GestServerCom {
     }
 
     boolean login(String username, String password) {
-        return login(username, password);
+        try {
+            return guestServer.login(username, password);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     List<User> getLoginUsers() {
