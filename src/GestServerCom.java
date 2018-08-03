@@ -50,9 +50,9 @@ public class GestServerCom {
         }
     }
 
-    boolean creatPair(User user0, User user1) {
+    boolean creatPair(String user0, String user1) {
         try {
-            return guestServer.creatPair(user0, user1);
+            return guestServer.createPair(user0, user1);
         } catch (RemoteException e) {
             e.printStackTrace();
             return false;
