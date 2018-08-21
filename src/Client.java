@@ -1,20 +1,29 @@
 import Elements.User;
+import Exceptions.AccessDeniedException;
 import Interfaces.IGestServerRmi;
 
+import javax.swing.*;
 import java.util.List;
 
 public class Client {
     static public String GestServerIP = "192.168.1.96";
 
-    static public void main(String[] args) {
-        GestServerCom gestServer = new GestServerCom(GestServerIP, IGestServerRmi.ServiceName);
-        gestServer.registUser("clienteName0", "cliente0", "pass");
-        gestServer.registUser("clienteName1", "cliente1", "pass");
-        gestServer.creatPair("cliente0", "cliente1");
-        List<User> list = gestServer.getLoginUsers();
-        for (User user : list) {
-            System.out.println(user);
+    static public void main(String[] args) throws InterruptedException {
+
+
+        GestServerCom gestServer = new GestServerCom(GestServerIP, IGestServerRmi.ServiceName, ClientRmi.getClientRmi());
+        GestInterface inter = new GestInterface(gestServer);
+        inter.start();
+
+        List<User> list = null;
+        try {
+            list = gestServer.getLoginUsers();
+            for (User user : list) {
+                System.out.println(user);
+            }
+        } catch (AccessDeniedException e) {
+            System.out.println("Acesso Negado");
         }
-        gestServer.login("teste", "teste");
+
     }
 }

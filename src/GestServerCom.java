@@ -1,4 +1,8 @@
+import Elements.Message;
 import Elements.User;
+import Exceptions.AccessDeniedException;
+import Exceptions.UserAlreadyLoggedException;
+import Interfaces.IClientRmi;
 import Interfaces.IGestServerRmi;
 
 import java.net.MalformedURLException;
@@ -11,8 +15,17 @@ import java.util.List;
 public class GestServerCom {
 
     private IGestServerRmi guestServer = null;
+    private IClientRmi clientRmi;
+    private GestInterface gui;
 
-    public GestServerCom(String registry, String serviceStr) {
+    public String getUsername() {
+        return username;
+    }
+
+    private String username = "";
+
+    public GestServerCom(String registry, String serviceStr, IClientRmi clientRmi) {
+        this.clientRmi = clientRmi;
         try {
             String registration = "rmi://" + registry + "/" + serviceStr;
             Remote service = Naming.lookup(registration);
@@ -22,7 +35,7 @@ public class GestServerCom {
         }
     }
 
-    public boolean registUser(String name, String username, String password) {
+    public boolean registerUser(String name, String username, String password) {
         try {
             return guestServer.registUser(name, username, password);
         } catch (RemoteException e) {
@@ -34,29 +47,53 @@ public class GestServerCom {
 
     boolean login(String username, String password) {
         try {
-            return guestServer.login(username, password);
+            return guestServer.login(this.username = username, password, clientRmi);
         } catch (RemoteException e) {
             e.printStackTrace();
+            return false;
+        } catch (UserAlreadyLoggedException e) {
+           gui.showError("Error: O Utilizador já se encontra logado");
             return false;
         }
     }
 
-    List<User> getLoginUsers() {
+    void logout() {
         try {
-            return guestServer.getLoginUsers();
+            guestServer.logOut(username, clientRmi);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+    }
+
+    List<User> getLoginUsers() throws AccessDeniedException {
+        try {
+            return guestServer.getLoginUsers(username, clientRmi.getCode());
         } catch (RemoteException e) {
             e.printStackTrace();
             return null;
         }
     }
 
-    boolean creatPair(String user0, String user1) {
+    boolean createPair(String user0, String user1) throws AccessDeniedException {
         try {
-            return guestServer.createPair(user0, user1);
+            return guestServer.createPair(user0, user1, clientRmi.getCode());
         } catch (RemoteException e) {
             e.printStackTrace();
             return false;
         }
     }
 
+    public void setGui(GestInterface gui) {
+
+        ((ClientRmi) clientRmi).setGui(this.gui = gui);
+    }
+
+    public boolean sendMensage(String dest, String msg) {
+        try {
+            return guestServer.sendMensage(new Message(username, msg, dest), ((ClientRmi) clientRmi)._getCode());
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 }
