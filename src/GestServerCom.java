@@ -1,5 +1,6 @@
 import Elements.Message;
 import Elements.User;
+import Elements.ValidationUser;
 import Exceptions.AccessDeniedException;
 import Exceptions.UserAlreadyLoggedException;
 import Interfaces.IClientRmi;
@@ -52,7 +53,7 @@ public class GestServerCom {
             e.printStackTrace();
             return false;
         } catch (UserAlreadyLoggedException e) {
-           gui.showError("Error: O Utilizador já se encontra logado");
+            gui.showError("Error: O Utilizador já se encontra logado");
             return false;
         }
     }
@@ -67,7 +68,7 @@ public class GestServerCom {
 
     List<User> getLoginUsers() throws AccessDeniedException {
         try {
-            return guestServer.getLoginUsers(username, clientRmi.getCode());
+            return guestServer.getLoginUsers(new ValidationUser(username, clientRmi.getCode()));
         } catch (RemoteException e) {
             e.printStackTrace();
             return null;
@@ -76,7 +77,7 @@ public class GestServerCom {
 
     boolean createPair(String user0, String user1) throws AccessDeniedException {
         try {
-            return guestServer.createPair(user0, user1, clientRmi.getCode());
+            return guestServer.createPair(user0, user1, new ValidationUser(username, clientRmi.getCode()));
         } catch (RemoteException e) {
             e.printStackTrace();
             return false;
@@ -90,7 +91,7 @@ public class GestServerCom {
 
     public boolean sendMensage(String dest, String msg) {
         try {
-            return guestServer.sendMensage(new Message(username, msg, dest), ((ClientRmi) clientRmi)._getCode());
+            return guestServer.sendMensage(new Message(username, msg, dest), new ValidationUser(username, ((ClientRmi) clientRmi)._getCode()));
         } catch (RemoteException e) {
             e.printStackTrace();
         }
