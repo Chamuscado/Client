@@ -1,4 +1,6 @@
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.*;
 
@@ -60,6 +62,35 @@ public class Login extends JDialog {
                     JOptionPane.showMessageDialog(loginForm, "Nome de Utilizador e/ou Palavra-passe errado(s)");
             }
         });
+
+        DocumentListener documentListener = new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                check();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                check();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                check();
+            }
+
+            private void check() {
+                if (nomeDeUtilizadorTextField.getText().isEmpty()
+                        || palavraPassePasswordField.getText().isEmpty()) {
+                    loginButton.setEnabled(false);
+                } else {
+                    loginButton.setEnabled(true);
+                }
+            }
+        };
+        loginButton.setEnabled(false);
+        nomeDeUtilizadorTextField.getDocument().addDocumentListener(documentListener);
+        palavraPassePasswordField.getDocument().addDocumentListener(documentListener);
     }
 
     private void onCancel() {

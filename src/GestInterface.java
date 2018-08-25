@@ -1,23 +1,40 @@
+import Elements.Game;
+import Elements.Status;
 import Elements.User;
 import Exceptions.AccessDeniedException;
+import sun.rmi.runtime.Log;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.awt.event.*;
+import java.util.ArrayList;
 import java.util.List;
 
 public class GestInterface {
-    private JList list1;
+    private JList onlinePlayerslist;
     private List<User> userList;
+    private List<Game> gameList;
     private JPanel Jpanel;
     private JTextArea MessagesArea;
     private JButton SendMessageButton;
     private JTextField mensageToSendField;
     private JLabel ChatUserNameLabel;
+    private JTable gamesTable;
+    private JPanel MyStatus;
+    private JPanel PairStatus;
+    private JLabel ShowNameLabel;
+    private JLabel ShowUserNameLabel;
+    private JLabel ShowWinsLabel;
+    private JLabel ShowDefeatsLabel;
+    private JButton LogoutButton;
+    private JLabel ShowNamePairLabel;
+    private JLabel ShowUserNamePairLabel;
+    private JLabel ShowWinsPairLabel;
+    private JLabel ShowDefeatsPairLabel;
+    private JButton EndPairButton;
     private GestServerCom gestService;
     private JFrame frame;
 
@@ -25,15 +42,15 @@ public class GestInterface {
 
         this.gestService = gestService;
         gestService.setGui(this);
-        list1.addListSelectionListener(new ListSelectionListener() {
+        onlinePlayerslist.addListSelectionListener(new ListSelectionListener() {
             @Override
             public void valueChanged(ListSelectionEvent e) {
-                int index = list1.getSelectedIndex();
+                int index = onlinePlayerslist.getSelectedIndex();
                 if (index < 0 || index >= userList.size()) {
                     ChatUserNameLabel.setText("Error: index = " + index);
                     return;
                 }
-                String name = (String) list1.getModel().getElementAt(index);
+                String name = (String) onlinePlayerslist.getModel().getElementAt(index);
                 name = name.substring(name.indexOf('(') + 1, name.indexOf(')'));
                 User user = null;
                 for (int i = 0; i < userList.size(); ++i) {
@@ -46,21 +63,68 @@ public class GestInterface {
                     ChatUserNameLabel.setText("Error: " + name);
             }
         });
+
+        JPopupMenu popupMenu = new JPopupMenu();
+        JMenuItem menuItem = new JMenuItem("Convidar para formar par");
+        menuItem.addActionListener(e -> {
+            if (!onlinePlayerslist.isSelectionEmpty()) {
+                int index = onlinePlayerslist.getSelectedIndex();
+                String username = (String) onlinePlayerslist.getModel().getElementAt(index);
+                username = username.substring(username.indexOf('(') + 1, username.indexOf(')'));
+                gestService.sendPairInvite(username);
+            }
+        });
+        popupMenu.add(menuItem);
+
+
+        onlinePlayerslist.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e) && !onlinePlayerslist.isSelectionEmpty()) {
+                    popupMenu.show(frame, e.getX(), e.getY());
+                }
+            }
+        });
+
+
         SendMessageButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                int index = list1.getSelectedIndex();
+                int index = onlinePlayerslist.getSelectedIndex();
                 if (index < 0 || index >= userList.size()) {
                     ChatUserNameLabel.setText("Error: index = " + index);
                     return;
                 }
-                String name = (String) list1.getModel().getElementAt(index);
+                String name = (String) onlinePlayerslist.getModel().getElementAt(index);
                 name = name.substring(name.indexOf('(') + 1, name.indexOf(')'));
                 String msg = mensageToSendField.getText().trim();
-                if (!msg.isEmpty())
-                    if (gestService.sendMensage(name, msg))
-                        MessagesArea.append(String.format("\n<%s> %s", gestService.getUsername(), msg));
+                if (!msg.isEmpty()) {
+                    try {
+                        if (gestService.sendMensage(name, msg))
+                            MessagesArea.append(String.format("\n<%s> %s", gestService.getUsername(), msg));
+                    } catch (AccessDeniedException e1) {
+                        Login.startLogin(gestService, frame);
+                    }
+                }
                 mensageToSendField.setText("");
+            }
+        });
+        LogoutButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                gestService.logout();
+                Login.startLogin(gestService, frame);
+            }
+        });
+        EndPairButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    gestService.endPair();
+                } catch (AccessDeniedException e1) {
+                    Login.startLogin(gestService, frame);
+                }
+                refreshStatusPanel();
             }
         });
     }
@@ -72,15 +136,16 @@ public class GestInterface {
         frame.pack();
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
-        list1.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        onlinePlayerslist.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         frame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
                 gestService.logout();
             }
         });
-        refreshPlayerList();
         MessagesArea.setEditable(false);
+        Login.startLogin(gestService, frame);
+        refreshGameTable();
     }
 
     public void refreshPlayerList() {
@@ -98,7 +163,63 @@ public class GestInterface {
             User user = userList.get(i);
             arrayToView[i] = user.toStringNameAndUserName();
         }
-        list1.setListData(arrayToView);
+        onlinePlayerslist.setListData(arrayToView);
+    }
+
+
+    public void refreshGameTable() {
+        try {
+            _refreshGameTable();
+        } catch (AccessDeniedException e) {
+            Login.startLogin(gestService, frame);
+        }
+    }
+
+    private void _refreshGameTable() throws AccessDeniedException {
+        //gameList = gestService.getMyGames();
+        DefaultTableModel model = new DefaultTableModel();
+        model.addColumn("coluna 0");
+        model.addColumn("coluna 1");
+        model.addColumn("coluna 2");
+
+        //for (int i = 0; i < gameList.size(); ++i) {
+        //    User user = userList.get(i);
+        model.addRow(new Object[]{"1", "2", new Button()});
+        //}
+
+        gamesTable.setModel(model);
+    }
+
+    public void refreshStatusPanel() {
+        try {
+            _refreshStatusPanel();
+        } catch (AccessDeniedException e) {
+            Login.startLogin(gestService, frame);
+        }
+    }
+
+    private void _refreshStatusPanel() throws AccessDeniedException {
+        Status status = gestService.getMyStatus();
+
+        ShowNameLabel.setText(status.getUser().name);
+        ShowUserNameLabel.setText(status.getUser().username);
+        ShowWinsLabel.setText(status.getWins() + "");
+        ShowDefeatsLabel.setText(status.getDefeats() + "");
+
+
+        status = gestService.getAdStatus();
+
+        if (status != null) {
+            ShowNamePairLabel.setText(status.getUser().name);
+            ShowUserNamePairLabel.setText(status.getUser().username);
+            ShowWinsPairLabel.setText(status.getWins() + "");
+            ShowDefeatsPairLabel.setText(status.getDefeats() + "");
+        } else {
+            ShowNamePairLabel.setText("");
+            ShowUserNamePairLabel.setText("");
+            ShowWinsPairLabel.setText("");
+            ShowDefeatsPairLabel.setText("");
+        }
     }
 
     public void addMessageToList(String source, String msg) {
@@ -107,5 +228,20 @@ public class GestInterface {
 
     public void showError(String errorMsg) {
         JOptionPane.showMessageDialog(frame, errorMsg);
+    }
+
+    public void showPairInvite(User user) {
+        String msg = String.format("O jogador %s(%s) convidou-o para formar um par, aceita?", user.name, user.username);
+        int answer = JOptionPane.showConfirmDialog(frame, msg, "Convite para formar par", JOptionPane.YES_NO_OPTION);
+        try {
+            gestService.sendAnswerPairInvite(user, answer == JOptionPane.YES_OPTION);
+        } catch (AccessDeniedException e) {
+            Login.startLogin(gestService, frame);
+        }
+    }
+
+    public void showAnswerOfPairInvite(User user, boolean answer) {
+        String msg = String.format("O jogador %s(%s) %s o convite!", user.name, user.username, answer ? "aceitou" : "recusou");
+        JOptionPane.showMessageDialog(frame, msg);
     }
 }

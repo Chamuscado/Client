@@ -1,11 +1,11 @@
-import Elements.Message;
-import Elements.User;
-import Elements.ValidationUser;
+import Elements.*;
 import Exceptions.AccessDeniedException;
 import Exceptions.UserAlreadyLoggedException;
 import Interfaces.IClientRmi;
 import Interfaces.IGestServerRmi;
+import sun.rmi.runtime.Log;
 
+import javax.swing.*;
 import java.net.MalformedURLException;
 import java.rmi.Naming;
 import java.rmi.NotBoundException;
@@ -18,6 +18,7 @@ public class GestServerCom {
     private IGestServerRmi guestServer = null;
     private IClientRmi clientRmi;
     private GestInterface gui;
+    private ValidationUser validationUser;
 
     public String getUsername() {
         return username;
@@ -27,12 +28,14 @@ public class GestServerCom {
 
     public GestServerCom(String registry, String serviceStr, IClientRmi clientRmi) {
         this.clientRmi = clientRmi;
+        this.validationUser = new ValidationUser(username, ((ClientRmi) clientRmi)._getCode());
         try {
             String registration = "rmi://" + registry + "/" + serviceStr;
             Remote service = Naming.lookup(registration);
             guestServer = (IGestServerRmi) service;
         } catch (RemoteException | NotBoundException | MalformedURLException e) {
-            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "O servidor de Gestão não se encontra ativo, ou não foi encontrado, a aplicação vai encerrar!");
+            System.exit(0);
         }
     }
 
@@ -48,7 +51,11 @@ public class GestServerCom {
 
     boolean login(String username, String password) {
         try {
-            return guestServer.login(this.username = username, password, clientRmi);
+            if (guestServer.login(this.username = username, password, clientRmi)) {
+                this.validationUser = new ValidationUser(username, ((ClientRmi) clientRmi)._getCode());
+                return true;
+            }
+            return false;
         } catch (RemoteException e) {
             e.printStackTrace();
             return false;
@@ -60,7 +67,7 @@ public class GestServerCom {
 
     void logout() {
         try {
-            guestServer.logOut(username, clientRmi);
+            guestServer.logOut(username, clientRmi, validationUser);
         } catch (RemoteException e) {
             e.printStackTrace();
         }
@@ -68,19 +75,10 @@ public class GestServerCom {
 
     List<User> getLoginUsers() throws AccessDeniedException {
         try {
-            return guestServer.getLoginUsers(new ValidationUser(username, clientRmi.getCode()));
+            return guestServer.getLoginUsers(validationUser);
         } catch (RemoteException e) {
             e.printStackTrace();
             return null;
-        }
-    }
-
-    boolean createPair(String user0, String user1) throws AccessDeniedException {
-        try {
-            return guestServer.createPair(user0, user1, new ValidationUser(username, clientRmi.getCode()));
-        } catch (RemoteException e) {
-            e.printStackTrace();
-            return false;
         }
     }
 
@@ -89,12 +87,62 @@ public class GestServerCom {
         ((ClientRmi) clientRmi).setGui(this.gui = gui);
     }
 
-    public boolean sendMensage(String dest, String msg) {
+    public boolean sendMensage(String dest, String msg) throws AccessDeniedException {
         try {
-            return guestServer.sendMensage(new Message(username, msg, dest), new ValidationUser(username, ((ClientRmi) clientRmi)._getCode()));
+            return guestServer.sendMensage(new Message(username, msg, dest), validationUser);
         } catch (RemoteException e) {
             e.printStackTrace();
         }
         return false;
+    }
+
+    public void sendAnswerPairInvite(User user, boolean answer) throws AccessDeniedException {
+        try {
+            guestServer.answerPairInvite(user, validationUser, answer);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void sendPairInvite(String username) {
+        new Thread(() -> {
+            try {
+                guestServer.sendPairInvite(username, validationUser);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            } catch (AccessDeniedException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    public void endPair() throws AccessDeniedException {
+        try {
+            guestServer.endPair(validationUser);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public Status getMyStatus() throws AccessDeniedException {
+        try {
+            return guestServer.getStatus(validationUser);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public Status getAdStatus() throws AccessDeniedException {
+        try {
+            Pair pair = guestServer.getMyPair(validationUser);
+            if (pair == null)
+                return null;
+            User userPair = pair.user0.username.compareTo(username) == 0 ? pair.user1 : pair.user0;
+            return guestServer.getStatus(userPair.username, validationUser);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

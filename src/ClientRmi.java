@@ -61,12 +61,17 @@ public class ClientRmi extends UnicastRemoteObject implements IClientRmi, Serial
     }
 
     @Override
-    public void RecivePairInvite(User user) throws RemoteException {
-
+    public void recivePairInvite(User user) throws RemoteException {
+        gui.showPairInvite(user);
     }
 
     @Override
-    public void AnswerPairInvite(String s, String s1, int i) throws RemoteException {
+    public void answerPairInvite(User user, boolean answer) throws RemoteException {
+        gui.showAnswerOfPairInvite(user, answer);
+    }
 
+    @Override
+    public void refreshStatus() throws RemoteException {
+        gui.refreshStatusPanel();
     }
 }
