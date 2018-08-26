@@ -1,10 +1,10 @@
 
-package three_in_row.ui.gui;
+package Game.ui.gui;
 
 import java.awt.GridLayout;
 import javax.swing.JPanel;
 
-import three_in_row.logic.ObservableGame;
+import Game.logic.ObservableGame;
 
 /**
  * Grelha de celulas... E' apenas um contentor

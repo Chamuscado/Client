@@ -145,4 +145,13 @@ public class GestServerCom {
         }
         return null;
     }
+
+    public String getGameServerIp() throws AccessDeniedException {
+        try {
+            return guestServer.getGameServerIp(validationUser);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }

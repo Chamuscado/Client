@@ -9,7 +9,7 @@ import java.rmi.server.RMIServerSocketFactory;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.Random;
 
-public class ClientRmi extends UnicastRemoteObject implements IClientRmi, Serializable {
+public class ClientRmi extends UnicastRemoteObject implements IClientRmi {
 
     private int code = new Random().nextInt();
 
@@ -73,5 +73,10 @@ public class ClientRmi extends UnicastRemoteObject implements IClientRmi, Serial
     @Override
     public void refreshStatus() throws RemoteException {
         gui.refreshStatusPanel();
+    }
+
+    @Override
+    public void setReadyToPlay(boolean ready) throws RemoteException {
+gui.setReadyToPlay(ready);
     }
 }

@@ -1,4 +1,4 @@
-package three_in_row.logic;
+package Game.logic;
 
 import GameLib.Player;
 import GameLib.Token;
@@ -9,10 +9,6 @@ public interface ObservableGame {
     Byte getState();
 
     void addObserver(Observer startOptionPanel);
-
-    void setPlayerName(int i, String text);
-
-    void startGame();
 
     Player getPlayer0();
 
@@ -30,5 +26,4 @@ public interface ObservableGame {
 
     Token getToken(int row, int col);
 
-    int getMyId();
 }

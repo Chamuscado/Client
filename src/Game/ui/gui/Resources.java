@@ -1,4 +1,4 @@
-package three_in_row.ui.gui;
+package Game.ui.gui;
 
 
 import java.net.URL;

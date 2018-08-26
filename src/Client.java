@@ -1,8 +1,9 @@
 import Elements.User;
 import Exceptions.AccessDeniedException;
 import Interfaces.IGestServerRmi;
+import model.GameModel;
+import Game.ui.gui.ThreeInRowView;
 
-import javax.swing.*;
 import java.util.List;
 
 public class Client {
@@ -26,4 +27,6 @@ public class Client {
         }
 
     }
+
+
 }

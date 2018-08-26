@@ -1,10 +1,10 @@
 
-package three_in_row.ui.gui;
+package Game.ui.gui;
 
 import GameLib.Player;
 import GameLib.Token;
 import GameLib.States;
-import three_in_row.logic.ObservableGame;
+import Game.logic.ObservableGame;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;

@@ -1,8 +1,8 @@
 
-package three_in_row.ui.gui;
+package Game.ui.gui;
 
 import GameLib.Player;
-import three_in_row.logic.ObservableGame;
+import Game.logic.ObservableGame;
 
 import java.awt.BasicStroke;
 import java.awt.Color;

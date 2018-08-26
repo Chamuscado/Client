@@ -2,7 +2,8 @@ import Elements.Game;
 import Elements.Status;
 import Elements.User;
 import Exceptions.AccessDeniedException;
-import sun.rmi.runtime.Log;
+import model.CallBack;
+import model.GameModel;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
@@ -10,7 +11,6 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
-import java.util.ArrayList;
 import java.util.List;
 
 public class GestInterface {
@@ -35,6 +35,7 @@ public class GestInterface {
     private JLabel ShowWinsPairLabel;
     private JLabel ShowDefeatsPairLabel;
     private JButton EndPairButton;
+    private JButton startGame;
     private GestServerCom gestService;
     private JFrame frame;
 
@@ -113,6 +114,7 @@ public class GestInterface {
             @Override
             public void actionPerformed(ActionEvent e) {
                 gestService.logout();
+                clearAll();
                 Login.startLogin(gestService, frame);
             }
         });
@@ -127,6 +129,37 @@ public class GestInterface {
                 refreshStatusPanel();
             }
         });
+        startGame.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    GameModel game = new GameModel(gestService.getUsername(), gestService.getGameServerIp(), new CallBack() {
+                        @Override
+                        public void execute() {
+                            refreshStatusPanel();
+                            refreshGameTable();
+                        }
+                    });
+                } catch (AccessDeniedException e1) {
+                    Login.startLogin(gestService, frame);
+                }
+            }
+        });
+    }
+
+    private void clearAll() {
+        ShowNameLabel.setText("");
+        ShowUserNameLabel.setText("");
+        ShowWinsLabel.setText("");
+        ShowDefeatsLabel.setText("");
+        ShowNamePairLabel.setText("");
+        ShowUserNamePairLabel.setText("");
+        ShowWinsPairLabel.setText("");
+        ShowDefeatsPairLabel.setText("");
+        onlinePlayerslist.removeAll();
+        ChatUserNameLabel.setText("");
+        mensageToSendField.setText("");
+        MessagesArea.setText("");
     }
 
     public void start() {
@@ -243,5 +276,9 @@ public class GestInterface {
     public void showAnswerOfPairInvite(User user, boolean answer) {
         String msg = String.format("O jogador %s(%s) %s o convite!", user.name, user.username, answer ? "aceitou" : "recusou");
         JOptionPane.showMessageDialog(frame, msg);
+    }
+
+    public void setReadyToPlay(boolean ready) {
+        startGame.setEnabled(ready);
     }
 }

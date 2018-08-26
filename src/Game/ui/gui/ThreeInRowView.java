@@ -1,6 +1,6 @@
-package three_in_row.ui.gui;
+package Game.ui.gui;
 
-import three_in_row.logic.ObservableGame;
+import Game.logic.ObservableGame;
 
 import java.awt.BorderLayout;
 import java.awt.Container;
@@ -29,7 +29,6 @@ public class ThreeInRowView extends JFrame implements Observer {
         setVisible(true);
         this.setSize(700, 500);
         this.setMinimumSize(new Dimension(650, 450));
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         validate();
     }
 
