@@ -17,7 +17,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class GameModel extends Observable implements ObservableGame, Constants {
-
+    private static final boolean DEBUG = false;
     private String username;
     private Socket socket;
     private ObjectInputStream in;
@@ -74,7 +74,7 @@ public class GameModel extends Observable implements ObservableGame, Constants {
 
 
     public GameModel(String username, String hostname, int port, CallBack callBack) {
-        this(username, hostname, port, 40000, callBack);
+        this(username, hostname, port, 4000, callBack);
     }
 
     public GameModel(String username, int port, CallBack callBack) {
@@ -205,7 +205,8 @@ public class GameModel extends Observable implements ObservableGame, Constants {
                 ClientRequest request = readRequest();
                 if (request == null)
                     break;
-                System.out.println("Recevido: <" + request.toString() + ">");
+                if (DEBUG)
+                    System.out.println("Recevido: <" + request.toString() + ">");
 
                 switch (request.getRequestKey()) {
                     case NULL:

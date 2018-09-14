@@ -1,8 +1,9 @@
 import Elements.Game;
+import Elements.Message;
 import Elements.Status;
 import Elements.User;
 import Exceptions.AccessDeniedException;
-import model.CallBack;
+import Interfaces.IClientRmi;
 import model.GameModel;
 
 import javax.swing.*;
@@ -36,12 +37,16 @@ public class GestInterface {
     private JLabel ShowDefeatsPairLabel;
     private JButton EndPairButton;
     private JButton startGame;
+    private JTextArea MessagesAreaGeral;
+    private JTextField mensageToSendFieldGeral;
+    private JButton SendMessageButtonGeral;
     private GestServerCom gestService;
     private JFrame frame;
+    private ClientRmi cliService;
 
-    public GestInterface(GestServerCom gestService) {
-
+    public GestInterface(GestServerCom gestService, ClientRmi cliService) {
         this.gestService = gestService;
+        this.cliService = cliService;
         gestService.setGui(this);
         onlinePlayerslist.addListSelectionListener(new ListSelectionListener() {
             @Override
@@ -59,7 +64,7 @@ public class GestInterface {
                         user = userList.get(i);
                 }
                 if (user != null)
-                    ChatUserNameLabel.setText(user.toStringNameAndUserName());
+                    changeChatTo(user);
                 else
                     ChatUserNameLabel.setText("Error: " + name);
             }
@@ -78,7 +83,7 @@ public class GestInterface {
         popupMenu.add(menuItem);
 
 
-        onlinePlayerslist.addMouseListener(new MouseAdapter() {
+        onlinePlayerslist.addMouseListener(new MouseAdapter() { //Todo -> não convidar o Todos
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (SwingUtilities.isRightMouseButton(e) && !onlinePlayerslist.isSelectionEmpty()) {
@@ -98,11 +103,11 @@ public class GestInterface {
                 }
                 String name = (String) onlinePlayerslist.getModel().getElementAt(index);
                 name = name.substring(name.indexOf('(') + 1, name.indexOf(')'));
+
                 String msg = mensageToSendField.getText().trim();
                 if (!msg.isEmpty()) {
                     try {
-                        if (gestService.sendMensage(name, msg))
-                            MessagesArea.append(String.format("\n<%s> %s", gestService.getUsername(), msg));
+                        gestService.sendMensage(name, msg);
                     } catch (AccessDeniedException e1) {
                         Login.startLogin(gestService, frame);
                     }
@@ -133,18 +138,43 @@ public class GestInterface {
             @Override
             public void actionPerformed(ActionEvent e) {
                 try {
-                    GameModel game = new GameModel(gestService.getUsername(), gestService.getGameServerIp(), new CallBack() {
-                        @Override
-                        public void execute() {
-                            refreshStatusPanel();
-                            refreshGameTable();
-                        }
+                    GameModel game = new GameModel(gestService.getUsername(), gestService.getGameServerIp(), () -> {
+                        refreshStatusPanel();
+                        refreshGameTable();
                     });
                 } catch (AccessDeniedException e1) {
                     Login.startLogin(gestService, frame);
                 }
             }
         });
+        SendMessageButtonGeral.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+
+                String msg = mensageToSendFieldGeral.getText().trim();
+                if (!msg.isEmpty()) {
+                    try {
+                        gestService.sendMensage(IClientRmi.ForAll, msg);
+                    } catch (AccessDeniedException e1) {
+                        Login.startLogin(gestService, frame);
+                    }
+                }
+                mensageToSendFieldGeral.setText("");
+            }
+        });
+    }
+
+    private void changeChatTo(User user) {
+        ChatUserNameLabel.setText(user.toStringNameAndUserName());
+        List<Message> messages = gestService.getMessages(user.username);
+        if (messages == null) {
+            MessagesArea.setText(">Não existem Mensagens!>");
+            return;
+        }
+        MessagesArea.setText("");
+        for (Message msg : messages) {
+            MessagesArea.append(String.format("<%s> %s\n", msg.getSource(), msg.getMessage()));
+        }
     }
 
     private void clearAll() {
@@ -159,7 +189,9 @@ public class GestInterface {
         onlinePlayerslist.removeAll();
         ChatUserNameLabel.setText("");
         mensageToSendField.setText("");
+        mensageToSendFieldGeral.setText("");
         MessagesArea.setText("");
+        MessagesAreaGeral.setText("");
     }
 
     public void start() {
@@ -177,8 +209,10 @@ public class GestInterface {
             }
         });
         MessagesArea.setEditable(false);
+        MessagesAreaGeral.setEditable(false);
         Login.startLogin(gestService, frame);
         refreshGameTable();
+        refreshMessagesGeral();
     }
 
     public void refreshPlayerList() {
@@ -209,16 +243,21 @@ public class GestInterface {
     }
 
     private void _refreshGameTable() throws AccessDeniedException {
-        //gameList = gestService.getMyGames();
+        gameList = gestService.getMyGames();
         DefaultTableModel model = new DefaultTableModel();
-        model.addColumn("coluna 0");
-        model.addColumn("coluna 1");
-        model.addColumn("coluna 2");
+        model.addColumn("Jogador 1");
+        model.addColumn("Jogador 2");
+        model.addColumn("Vencedor");
 
-        //for (int i = 0; i < gameList.size(); ++i) {
-        //    User user = userList.get(i);
-        model.addRow(new Object[]{"1", "2", new Button()});
-        //}
+        for (Game game : gameList) {
+            model.addRow(
+                    new Object[]{
+                            game.players[0].toStringNameAndUserName(),
+                            game.players[1].toStringNameAndUserName(),
+                            game.winner != null ? game.winner.toStringNameAndUserName() : ""
+                    });
+        }
+
 
         gamesTable.setModel(model);
     }
@@ -255,8 +294,26 @@ public class GestInterface {
         }
     }
 
-    public void addMessageToList(String source, String msg) {
-        MessagesArea.append(String.format("\n<%s> %s", source, msg));
+    public void refreshMessages(String source) {
+        ListModel<String> users = (ListModel<String>) onlinePlayerslist.getModel();
+        for (int i = 0; i < users.getSize(); ++i) {
+            String name = users.getElementAt(i);
+            name = name.substring(name.indexOf('(') + 1, name.indexOf(')'));
+            if (name.equals(source)) {
+                if (i != onlinePlayerslist.getSelectedIndex())
+                    onlinePlayerslist.setSelectionInterval(i, i);
+                else {
+                    User user = null;
+                    for (int i2 = 0; i2 < userList.size(); ++i2) {
+                        if (userList.get(i2).username.compareTo(name) == 0)
+                            user = userList.get(i2);
+                    }
+                    if (user != null)
+                        changeChatTo(user);
+                }
+                break;
+            }
+        }
     }
 
     public void showError(String errorMsg) {
@@ -280,5 +337,17 @@ public class GestInterface {
 
     public void setReadyToPlay(boolean ready) {
         startGame.setEnabled(ready);
+    }
+
+    public void refreshMessagesGeral() {
+        List<Message> messages = gestService.getMessages(IClientRmi.ForAll);
+        if (messages == null) {
+            MessagesAreaGeral.setText(">Não existem Mensagens!>");
+            return;
+        }
+        MessagesAreaGeral.setText("");
+        for (Message msg : messages) {
+            MessagesAreaGeral.append(String.format("<%s> %s\n", msg.getSource(), msg.getMessage()));
+        }
     }
 }

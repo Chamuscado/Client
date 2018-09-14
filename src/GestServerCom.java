@@ -1,9 +1,7 @@
 import Elements.*;
-import Exceptions.AccessDeniedException;
-import Exceptions.UserAlreadyLoggedException;
+import Exceptions.*;
 import Interfaces.IClientRmi;
 import Interfaces.IGestServerRmi;
-import sun.rmi.runtime.Log;
 
 import javax.swing.*;
 import java.net.MalformedURLException;
@@ -11,12 +9,13 @@ import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.util.ArrayList;
 import java.util.List;
 
 public class GestServerCom {
 
     private IGestServerRmi guestServer = null;
-    private IClientRmi clientRmi;
+    private ClientRmi clientRmi;
     private GestInterface gui;
     private ValidationUser validationUser;
 
@@ -26,7 +25,7 @@ public class GestServerCom {
 
     private String username = "";
 
-    public GestServerCom(String registry, String serviceStr, IClientRmi clientRmi) {
+    public GestServerCom(String registry, String serviceStr, ClientRmi clientRmi) {
         this.clientRmi = clientRmi;
         this.validationUser = new ValidationUser(username, ((ClientRmi) clientRmi)._getCode());
         try {
@@ -89,7 +88,14 @@ public class GestServerCom {
 
     public boolean sendMensage(String dest, String msg) throws AccessDeniedException {
         try {
-            return guestServer.sendMensage(new Message(username, msg, dest), validationUser);
+            Message msg2;
+            //if (dest.equals(IClientRmi.ForAll))
+            //    msg2 = new Message(IClientRmi.ForAll, msg, IClientRmi.ForAll);
+            //else
+            msg2 = new Message(username, msg, dest);
+            if (guestServer.sendMensage(msg2, validationUser)) {
+                return true;
+            }
         } catch (RemoteException e) {
             e.printStackTrace();
         }
@@ -153,5 +159,28 @@ public class GestServerCom {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public List<Message> getMessages(String username) {
+        try {
+            MessagePair pair;
+            if (username.equals(IClientRmi.ForAll))
+                pair = new MessagePair(IClientRmi.ForAll, IClientRmi.ForAll);
+            else
+                pair = new MessagePair(username, this.username);
+            return guestServer.getMessages(pair, validationUser);
+        } catch (RemoteException | AccessDeniedException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public List<Game> getMyGames() {
+        try {
+            return guestServer.getHistGames(validationUser);
+        } catch (RemoteException | AccessDeniedException e) {
+            e.printStackTrace();
+        }
+        return new ArrayList<>();
     }
 }

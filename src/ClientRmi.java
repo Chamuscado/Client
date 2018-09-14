@@ -2,11 +2,13 @@ import Elements.Message;
 import Elements.User;
 import Interfaces.IClientRmi;
 
-import java.io.Serializable;
 import java.rmi.RemoteException;
 import java.rmi.server.RMIClientSocketFactory;
 import java.rmi.server.RMIServerSocketFactory;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Random;
 
 public class ClientRmi extends UnicastRemoteObject implements IClientRmi {
@@ -19,7 +21,7 @@ public class ClientRmi extends UnicastRemoteObject implements IClientRmi {
 
     private GestInterface gui;
 
-    static public IClientRmi getClientRmi() {
+    static public ClientRmi getClientRmi() {
         ClientRmi clientRmi = null;
         try {
             clientRmi = new ClientRmi();
@@ -38,11 +40,6 @@ public class ClientRmi extends UnicastRemoteObject implements IClientRmi {
 
     protected ClientRmi(int port, RMIClientSocketFactory csf, RMIServerSocketFactory ssf) throws RemoteException {
         super(port, csf, ssf);
-    }
-
-    @Override
-    public void sendMensage(Message message) throws RemoteException {
-        gui.addMessageToList(message.getSource(), message.getMessage());
     }
 
     @Override
@@ -77,6 +74,14 @@ public class ClientRmi extends UnicastRemoteObject implements IClientRmi {
 
     @Override
     public void setReadyToPlay(boolean ready) throws RemoteException {
-gui.setReadyToPlay(ready);
+        gui.setReadyToPlay(ready);
+    }
+
+    @Override
+    public void refreshMessagesFor(String source) throws RemoteException {
+        if (source.equals(IClientRmi.ForAll))
+            gui.refreshMessagesGeral();
+        else
+            gui.refreshMessages(source);
     }
 }
