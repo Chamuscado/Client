@@ -1,5 +1,4 @@
 # PD-Client
-# PD-GestServer
 Sistema Distribuido 
 Nota final: 92.5 %
 
